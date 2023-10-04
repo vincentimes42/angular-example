@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: angular-example-app
-          image: registry.gitlab.com/$TAG_COMMIT
+          image: kube-infra-demo/angular-example/main-production:latest
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -35,12 +35,12 @@ metadata:
   labels:
     app: angular-example
 spec:
-  type: LoadBalancer
   selector:
+    type: NodePort
     app: angular-example
   ports:
     - protocol: TCP
-      name: http
       port: 80
       targetPort: 80
-      nodePort: 31000
+      name: http
+      nodePort: 30003

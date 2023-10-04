@@ -4,7 +4,6 @@
 
 export const environment = {
   production: false,
-  environment: 'development',
   backendUrl: 'http://localhost:8080/api/employees',
 };
 
