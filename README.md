@@ -1,27 +1,54 @@
-# AngularFrontend
+# Angular-example
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 12.1.3.
+Application Angular 12/JAVA17.
 
-## Development server
+L'application est une SPA simpliste qui permet de gérer les employées mis à disposition par le webservice du projet  https://gitlab.com/kube-infra-demo/springboot3-example 
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The app will automatically reload if you change any of the source files.
+## Quelques URLS de l'application
+URL locale: http://localhost:4200/ 
 
-## Code scaffolding
+## DOCKER COMPOSE
+L'application peut être lancée en local  via le gestionnaire de paquet ou via docker
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+- Lancement via gestionnaire de paquets (ex: npm):
 
-## Build
+```sh
+npm install
+npm start
+```
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
 
-## Running unit tests
+Il est égalment possible de lancer l'application via une image générée avec Dockerfile/docker compose.
+Il est a noté que l'addresse du webservice REST backend appelé par l'application est configurable dans le fichier .env. 
+Par défaut l'url du webservice backend est `http://localhost:8080/
 
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
+- Lancement via Docker compose;
 
-## Running end-to-end tests
+```sh
+docker compose up
+```
 
-Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
+Visuel de l'application:
+![Alt text](image.png)
 
-## Further help
+## CI/CD
+Le projet possède une CI/CD  capable de builder et de releaser l'application. 
+Une étape de déployment sur kubernetes est également présente mais reste à terminer faute d'instance kubernetes accessible.
 
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.io/cli) page.
+## KUBERNETES
+Pour la partie deploiement kubernetes, est est fonctionnelle en local (ex minikube). 
+Les containers utilisent les images présentes dans le container registry Gitlab du groupe de projets 
+
+Il y a des fichiers dans le dossier deployment/ pour pouvoir déployer l'application sur kubernetes. 
+
+Fichiers K8S pour l'application:
+- app-deployment.yml contient le deploiement de l'application.
+  - l'application est exposé via une servie Nodeport et un Ingress.
+    - il y a les deux car NotePorte est plus stable que Ingress dans mon minikube sur windows WSL2.
+- app-deployment-ci.yml est destiné à être utilisé par la CI/CD de gitlab 
+
+
+Avant de deployer l'application sur kubernetes il faut avoir intégréer l'url du backend deployé à l'image utilisée.
+
+
+Les commandes sont présentées ici => https://gitlab.com/kube-infra-demo/springboot3-example/-/blob/main/README.md
