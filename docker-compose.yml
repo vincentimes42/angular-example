@@ -1,0 +1,12 @@
+version: "3.8"
+services:
+  app:
+    env_file: .env
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        backendUrl: ${BACKEND_URL}
+    container_name: angular-example_1
+    ports:
+      - "4200:80"

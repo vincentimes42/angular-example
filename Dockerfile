@@ -2,6 +2,7 @@
 FROM node:14.15.5-alpine3.13 AS build
 WORKDIR /usr/src/app
 COPY package.json package-lock.json ./
+ARG backendUrl
 RUN npm i -g @angular/cli@12.1.4
 
 # Install app dependencies:

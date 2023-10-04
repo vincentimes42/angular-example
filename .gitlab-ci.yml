@@ -1,0 +1,85 @@
+services:
+  - docker:dind
+
+variables:
+  DOCKER_DRIVER: overlay2
+  TAG_LATEST: $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_SLUG:latest
+  TAG_COMMIT: $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_SLUG:$CI_COMMIT_SHORT_SHA
+stages:
+  - build
+  - release
+  - deploy
+
+
+set-app-version:
+  image: node:14.15.5-alpine3.13
+  stage: build
+  script:
+    - VERSION=$(node -p "require('./package.json').version")
+    - echo "VERSION=$VERSION"
+    - echo "VERSION=$VERSION" > build.env
+  artifacts:
+    reports:
+      dotenv: build.env
+
+docker-build:
+  image: docker:latest
+  stage: build
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_TAG != null #run the job automatically if current branch is the default one or we are on a tag
+    - when: manual # else manual launch of the job
+  script:
+    - docker build -t $TAG_COMMIT -t $TAG_LATEST .
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+    - docker push $TAG_COMMIT
+    - docker push $TAG_LATEST
+
+release:
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  stage: release
+  dependencies:
+    - set-app-version
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: never                                  # Do not run this job in a tag pipeline
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH  # Run this job when commits are pushed or merged to the default branch
+  script:
+    - echo "Create release for v$VERSION"
+  release:
+    description: 'v$VERSION'
+    tag_name: 'v$VERSION'
+
+k8s-deploy-staging:
+  image:
+    name: bitnami/kubectl:latest
+    entrypoint: [ "" ]
+  stage: deploy
+  when: manual
+  script:
+    - echo "Start Deployment" # TODO define access to k8s
+    - kubectl delete secret --namespace=staging registry.gitlab.com
+    - kubectl create secret --namespace=staging docker-registry registry.gitlab.com --docker-server=$CI_REGISTRY --docker-username=$CI_REGISTRY_USER --docker-password=$CI_REGISTRY_PASSWORD --docker-email=$GITLAB_USER_EMAIL
+    - kubectl create configmap --namespace=staging springboot-config-map --from-literal=db-url=$SPRING_POSTGRES_URL
+    - kubectl apply -f deployment/app-deployment.yml --namespace=staging
+  environment:
+    name: staging
+    url: https://example.staging.com
+
+k8s-deploy-production:
+  image:
+    name: bitnami/kubectl:latest
+    entrypoint: [ "" ]
+  stage: deploy
+  rules:
+    - if: $CI_COMMIT_TAG != null #run the job automatically
+      when: manual
+    - when: never
+  script:
+    - echo "Start Deployment" # TODO define access to k8s
+    - kubectl delete secret --namespace=production registry.gitlab.com
+    - kubectl create secret --namespace=production docker-registry registry.gitlab.com --docker-server=$CI_REGISTRY --docker-username=$CI_REGISTRY_USER --docker-password=$CI_REGISTRY_PASSWORD --docker-email=$GITLAB_USER_EMAIL
+    - kubectl create configmap --namespace=production springboot-config-map --from-literal=db-url=$SPRING_POSTGRES_URL
+    - kubectl apply -f deployment/app-deployment.yml --namespace=production
+  environment:
+    name: production
+    url: https://example.production.com
