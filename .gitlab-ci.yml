@@ -3,8 +3,8 @@ services:
 
 variables:
   DOCKER_DRIVER: overlay2
-  TAG_LATEST: $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_SLUG:latest
-  TAG_COMMIT: $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_SLUG:$CI_COMMIT_SHORT_SHA
+  TAG_LATEST: $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_SLUG-$CI_ENVIRONMENT_NAME:latest
+  TAG_COMMIT: $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_SLUG-$CI_ENVIRONMENT_NAME:$CI_COMMIT_SHORT_SHA
 stages:
   - build
   - release
@@ -22,7 +22,7 @@ set-app-version:
     reports:
       dotenv: build.env
 
-docker-build:
+docker-build-prod:
   image: docker:latest
   stage: build
   rules:
@@ -33,6 +33,32 @@ docker-build:
     - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
     - docker push $TAG_COMMIT
     - docker push $TAG_LATEST
+
+.build:
+  image: docker:latest
+    stage: build
+  script:
+      - docker build --build-arg= backendUrl=$BACKEND_URL  -t $TAG_COMMIT -t $TAG_LATEST .
+      - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+      - docker push $TAG_COMMIT
+      - docker push $TAG_LATEST
+
+docker-build-local:
+  extends: .build
+  environment:
+    name: staging
+  rules:
+    - when: manual # else manual launch of the job
+
+  
+docker-build-prod:
+  extends: .build
+  environment:
+    name: production
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_TAG != null #run the job automatically if current branch is the default one or we are on a tag
+    - when: manual # else manual launch of the job
+
 
 release:
   image: registry.gitlab.com/gitlab-org/release-cli:latest
@@ -63,7 +89,6 @@ k8s-deploy-staging:
     - kubectl apply -f deployment/app-deployment.yml --namespace=staging
   environment:
     name: staging
-    url: https://example.staging.com
 
 k8s-deploy-production:
   image:
@@ -82,4 +107,3 @@ k8s-deploy-production:
     - kubectl apply -f deployment/app-deployment.yml --namespace=production
   environment:
     name: production
-    url: https://example.production.com

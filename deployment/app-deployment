@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: angular-example-deployment
+  labels:
+    app: angular-example
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: angular-example
+  template:
+    metadata:
+      labels:
+        app: angular-example
+    spec:
+      containers:
+        - name: angular-example-app
+          image: registry.gitlab.com/$TAG_COMMIT
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 80
+          resources:
+            limits:
+              cpu: 0.2
+              memory: "200Mi"
+      imagePullSecrets:
+        - name: registry.gitlab.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: angular-example-service
+  labels:
+    app: angular-example
+spec:
+  type: LoadBalancer
+  selector:
+    app: angular-example
+  ports:
+    - protocol: TCP
+      name: http
+      port: 80
+      targetPort: 80
+      nodePort: 31000
