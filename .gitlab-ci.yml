@@ -36,9 +36,9 @@ docker-build-prod:
 
 .build:
   image: docker:latest
-    stage: build
+  stage: build
   script:
-      - docker build --build-arg= backendUrl=$BACKEND_URL  -t $TAG_COMMIT -t $TAG_LATEST .
+      - docker build --build-arg backendUrl=$BACKEND_URL  -t $TAG_COMMIT -t $TAG_LATEST .
       - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
       - docker push $TAG_COMMIT
       - docker push $TAG_LATEST
